@@ -13,6 +13,54 @@ const loginValidation = [
     .withMessage('Password is required'),
 ];
 
+const registerValidation = [
+  body('name')
+    .trim()
+    .notEmpty()
+    .withMessage('Name is required')
+    .isLength({ min: 2 })
+    .withMessage('Name must be at least 2 characters'),
+  body('email')
+    .isEmail()
+    .normalizeEmail()
+    .withMessage('Invalid email format'),
+  body('password')
+    .isLength({ min: 6 })
+    .withMessage('Password must be at least 6 characters'),
+];
+
+const register = async (req, res, next) => {
+  try {
+    const { name, email, password } = req.body;
+
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return next(new AppError('Email already in use', 400));
+    }
+
+    const user = new User({
+      name,
+      email,
+      passwordHash: password,
+      role: 'user',
+      status: 'active',
+    });
+
+    await user.save();
+
+    const token = generateToken(user._id);
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful',
+      token,
+      user: user.toJSON(),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const login = async (req, res, next) => {
   try {
     const { email, password } = req.body;
@@ -46,4 +94,4 @@ const login = async (req, res, next) => {
   }
 };
 
-module.exports = { login, loginValidation };
+module.exports = { register, registerValidation, login, loginValidation };

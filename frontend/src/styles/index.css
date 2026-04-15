@@ -1,0 +1,56 @@
+@import './fonts.css';
+@import './tailwind.css';
+@import './theme.css';
+
+/* Custom toast styles */
+[data-sonner-toast] {
+  background-color: var(--toast-bg) !important;
+  color: #FFFFFF !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 14px 16px !important;
+  min-width: 320px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15) !important;
+}
+
+[data-sonner-toast] [data-icon] {
+  width: 24px !important;
+  height: 24px !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+[data-sonner-toast][data-type="success"] [data-icon] {
+  background-color: #12B76A !important;
+  color: #FFFFFF !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-icon] {
+  background-color: #F04438 !important;
+  color: #FFFFFF !important;
+}
+
+[data-sonner-toast][data-type="info"] [data-icon] {
+  background-color: #1570EF !important;
+  color: #FFFFFF !important;
+}
+
+[data-sonner-toast] [data-title] {
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  color: #FFFFFF !important;
+}
+
+[data-sonner-toast] [data-description] {
+  font-size: 13px !important;
+  color: var(--toast-link) !important;
+  cursor: pointer !important;
+}
+
+[data-sonner-toast] [data-close-button] {
+  color: #98A2B3 !important;
+  border: none !important;
+  background: transparent !important;
+}
