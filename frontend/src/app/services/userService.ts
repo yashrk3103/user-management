@@ -55,4 +55,10 @@ export const userService = {
       password: data.newPassword,
     });
   },
+
+  async resetUserPassword(id: string, newPassword: string): Promise<void> {
+    await axiosInstance.put(`/users/${id}`, {
+      password: newPassword,
+    });
+  },
 };

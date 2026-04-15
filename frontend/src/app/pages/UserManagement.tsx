@@ -37,6 +37,16 @@ export const UserManagement = () => {
     loadUsers();
   }, []);
 
+  useEffect(() => {
+    const action = searchParams.get('action');
+    if (action === 'create' && currentUser?.role === 'admin') {
+      openCreateModal();
+      const params = new URLSearchParams(searchParams);
+      params.delete('action');
+      setSearchParams(params, { replace: true });
+    }
+  }, [searchParams, currentUser?.role, setSearchParams]);
+
   const loadUsers = async () => {
     try {
       const data = await userService.getUsers();
