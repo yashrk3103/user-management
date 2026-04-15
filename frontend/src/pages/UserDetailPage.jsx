@@ -32,7 +32,7 @@ export const UserDetailPage = () => {
   if (error) return <div className="error-message">{error}</div>;
   if (!user) return <div className="error-message">User not found</div>;
 
-  const canEdit = currentUser?.role === 'admin' && user.role !== 'admin';
+  const canEdit = ['admin', 'manager'].includes(currentUser?.role) && user.role !== 'admin';
 
   return (
     <div className="user-detail-container">

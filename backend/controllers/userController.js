@@ -1,63 +1,66 @@
-const { body, query } = require('express-validator');
-const User = require('../models/User');
-const AppError = require('../utils/errors');
+const { body, query } = require("express-validator");
+const User = require("../models/User");
+const AppError = require("../utils/errors");
 
 const createUserValidation = [
-  body('name')
+  body("name")
     .trim()
     .notEmpty()
-    .withMessage('Name is required')
+    .withMessage("Name is required")
     .isLength({ min: 2 })
-    .withMessage('Name must be at least 2 characters'),
-  body('email')
-    .isEmail()
-    .normalizeEmail()
-    .withMessage('Invalid email format'),
-  body('password')
+    .withMessage("Name must be at least 2 characters"),
+  body("email").isEmail().normalizeEmail().withMessage("Invalid email format"),
+  body("password")
     .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters'),
-  body('role')
+    .withMessage("Password must be at least 6 characters"),
+  body("role")
     .optional()
-    .isIn(['admin', 'manager', 'user'])
-    .withMessage('Invalid role'),
-  body('status')
+    .isIn(["admin", "manager", "user"])
+    .withMessage("Invalid role"),
+  body("status")
     .optional()
-    .isIn(['active', 'inactive'])
-    .withMessage('Invalid status'),
+    .isIn(["active", "inactive"])
+    .withMessage("Invalid status"),
 ];
 
 const updateUserValidation = [
-  body('name')
+  body("name")
     .optional()
     .trim()
     .isLength({ min: 2 })
-    .withMessage('Name must be at least 2 characters'),
-  body('email')
+    .withMessage("Name must be at least 2 characters"),
+  body("email")
     .optional()
     .isEmail()
     .normalizeEmail()
-    .withMessage('Invalid email format'),
-  body('password')
+    .withMessage("Invalid email format"),
+  body("password")
     .optional()
     .isLength({ min: 6 })
-    .withMessage('Password must be at least 6 characters'),
-  body('role')
+    .withMessage("Password must be at least 6 characters"),
+  body("role")
     .optional()
-    .isIn(['admin', 'manager', 'user'])
-    .withMessage('Invalid role'),
-  body('status')
+    .isIn(["admin", "manager", "user"])
+    .withMessage("Invalid role"),
+  body("status")
     .optional()
-    .isIn(['active', 'inactive'])
-    .withMessage('Invalid status'),
+    .isIn(["active", "inactive"])
+    .withMessage("Invalid status"),
 ];
 
 const createUser = async (req, res, next) => {
   try {
-    const { name, email, password, role = 'user', status = 'active' } = req.body;
+    const {
+      name,
+      email,
+      password,
+      role = "user",
+      status = "active",
+    } = req.body;
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return next(new AppError('Email already in use', 400));
+      return next(new AppError("Email already in use", 400));
     }
 
     const user = new User({
@@ -74,7 +77,7 @@ const createUser = async (req, res, next) => {
 
     res.status(201).json({
       success: true,
-      message: 'User created successfully',
+      message: "User created successfully",
       user: user.toJSON(),
     });
   } catch (error) {
@@ -94,16 +97,16 @@ const getUsers = async (req, res, next) => {
     if (status) filter.status = status;
     if (search) {
       filter.$or = [
-        { name: { $regex: search, $options: 'i' } },
-        { email: { $regex: search, $options: 'i' } },
+        { name: { $regex: search, $options: "i" } },
+        { email: { $regex: search, $options: "i" } },
       ];
     }
 
     const totalUsers = await User.countDocuments(filter);
     const users = await User.find(filter)
-      .select('-passwordHash')
-      .populate('createdBy', 'name email')
-      .populate('updatedBy', 'name email')
+      .select("-passwordHash")
+      .populate("createdBy", "name email")
+      .populate("updatedBy", "name email")
       .limit(limitNum)
       .skip((pageNum - 1) * limitNum)
       .exec();
@@ -127,12 +130,12 @@ const getUserById = async (req, res, next) => {
     const { id } = req.params;
 
     const user = await User.findById(id)
-      .select('-passwordHash')
-      .populate('createdBy', 'name email')
-      .populate('updatedBy', 'name email');
+      .select("-passwordHash")
+      .populate("createdBy", "name email")
+      .populate("updatedBy", "name email");
 
     if (!user) {
-      return next(new AppError('User not found', 404));
+      return next(new AppError("User not found", 404));
     }
 
     res.json({
@@ -152,13 +155,25 @@ const updateUser = async (req, res, next) => {
     const user = await User.findById(id);
 
     if (!user) {
-      return next(new AppError('User not found', 404));
+      return next(new AppError("User not found", 404));
+    }
+
+    if (req.user.role === "manager" && user.role === "admin") {
+      return next(new AppError("Managers cannot modify admin users", 403));
+    }
+
+    if (req.user.role === "manager" && role === "admin") {
+      return next(new AppError("Managers cannot assign admin role", 403));
+    }
+
+    if (req.user.role === "manager" && status !== undefined) {
+      return next(new AppError("Managers cannot change user status", 403));
     }
 
     if (email && email !== user.email) {
       const existingUser = await User.findOne({ email });
       if (existingUser) {
-        return next(new AppError('Email already in use', 400));
+        return next(new AppError("Email already in use", 400));
       }
     }
 
@@ -174,7 +189,28 @@ const updateUser = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: 'User updated successfully',
+      message: "User updated successfully",
+      user: user.toJSON(),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const activateUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const user = await User.findById(id);
+
+    if (!user) {
+      return next(new AppError("User not found", 404));
+    }
+    user.status = "active";
+    user.updatedBy = req.user._id;
+    await user.save();
+    res.json({
+      success: true,
+      message: "User activated successfully",
       user: user.toJSON(),
     });
   } catch (error) {
@@ -189,17 +225,17 @@ const deactivateUser = async (req, res, next) => {
     const user = await User.findById(id);
 
     if (!user) {
-      return next(new AppError('User not found', 404));
+      return next(new AppError("User not found", 404));
     }
 
-    user.status = 'inactive';
+    user.status = "inactive";
     user.updatedBy = req.user._id;
 
     await user.save();
 
     res.json({
       success: true,
-      message: 'User deactivated successfully',
+      message: "User deactivated successfully",
       user: user.toJSON(),
     });
   } catch (error) {
@@ -210,9 +246,9 @@ const deactivateUser = async (req, res, next) => {
 const getOwnProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id)
-      .select('-passwordHash')
-      .populate('createdBy', 'name email')
-      .populate('updatedBy', 'name email');
+      .select("-passwordHash")
+      .populate("createdBy", "name email")
+      .populate("updatedBy", "name email");
 
     res.json({
       success: true,
@@ -238,7 +274,7 @@ const updateOwnProfile = async (req, res, next) => {
 
     res.json({
       success: true,
-      message: 'Profile updated successfully',
+      message: "Profile updated successfully",
       user: user.toJSON(),
     });
   } catch (error) {
@@ -254,6 +290,7 @@ module.exports = {
   updateUser,
   updateUserValidation,
   deactivateUser,
+  activateUser,
   getOwnProfile,
   updateOwnProfile,
 };

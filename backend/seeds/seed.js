@@ -4,10 +4,7 @@ const User = require('../models/User');
 
 const seedUsers = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    await mongoose.connect(process.env.MONGODB_URI);
 
     await User.deleteMany({});
 
@@ -42,15 +39,15 @@ const seedUsers = async () => {
       },
     ];
 
-    const savedUsers = await User.insertMany(demoUsers);
-
-    demoUsers.forEach((user, index) => {
+    // Use create() instead of insertMany() to trigger pre-save hooks for password hashing
+    for (const userData of demoUsers) {
+      const user = await User.create(userData);
       console.log(
-        `Created ${user.role.toUpperCase()}: ${user.email} (Password: ${user.passwordHash})`
+        `Created ${user.role.toUpperCase()}: ${user.email}`
       );
-    });
+    }
 
-    console.log('\nSeed data inserted successfully!');
+    console.log('\n✓ Database seeded successfully!');
 
     mongoose.connection.close();
   } catch (error) {

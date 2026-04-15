@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { userAPI } from '../services/api';
 import '../styles/Form.css';
 
 export const EditUserPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -25,6 +27,13 @@ export const EditUserPage = () => {
     try {
       const response = await userAPI.getUserById(id);
       const user = response.data.data;
+
+      if (currentUser?.role === 'manager' && user.role === 'admin') {
+        setError('Managers cannot edit admin users');
+        setLoading(false);
+        return;
+      }
+
       setFormData({
         name: user.name,
         email: user.email,
@@ -113,17 +122,19 @@ export const EditUserPage = () => {
           <select id="role" name="role" value={formData.role} onChange={handleChange}>
             <option value="user">User</option>
             <option value="manager">Manager</option>
-            <option value="admin">Admin</option>
+            {currentUser?.role === 'admin' && <option value="admin">Admin</option>}
           </select>
         </div>
 
-        <div className="form-group">
-          <label htmlFor="status">Status</label>
-          <select id="status" name="status" value={formData.status} onChange={handleChange}>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
-        </div>
+        {currentUser?.role === 'admin' && (
+          <div className="form-group">
+            <label htmlFor="status">Status</label>
+            <select id="status" name="status" value={formData.status} onChange={handleChange}>
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        )}
 
         <div className="form-actions">
           <button type="submit" disabled={submitting} className="btn btn-primary">
