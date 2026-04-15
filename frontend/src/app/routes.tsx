@@ -6,7 +6,13 @@ import { Dashboard } from './pages/Dashboard';
 import { UserManagement } from './pages/UserManagement';
 import { UserDetail } from './pages/UserDetail';
 import { Profile } from './pages/Profile';
-import { Placeholder } from './pages/Placeholder';
+import { Appearance } from './pages/Appearance';
+import { Connections } from './pages/Connections';
+import { Notifications } from './pages/Notifications';
+import { Security } from './pages/Security';
+import { Authentication } from './pages/Authentication';
+import { Settings } from './pages/Settings';
+import { Documentation } from './pages/Documentation';
 
 export const router = createBrowserRouter([
   {
@@ -43,31 +49,31 @@ export const router = createBrowserRouter([
       },
       {
         path: 'appearance',
-        element: <Placeholder pageName="Appearance" />,
+        element: <Appearance />,
       },
       {
         path: 'connections',
-        element: <Placeholder pageName="Connections" />,
+        element: <Connections />,
       },
       {
         path: 'notifications',
-        element: <Placeholder pageName="Notifications" />,
+        element: <Notifications />,
       },
       {
         path: 'security',
-        element: <Placeholder pageName="Security & Access" />,
+        element: <Security />,
       },
       {
         path: 'authentication',
-        element: <Placeholder pageName="Authentication" />,
+        element: <Authentication />,
       },
       {
         path: 'settings',
-        element: <Placeholder pageName="Settings" />,
+        element: <Settings />,
       },
       {
         path: 'documentation',
-        element: <Placeholder pageName="Documentation" />,
+        element: <Documentation />,
       },
       {
         path: '*',

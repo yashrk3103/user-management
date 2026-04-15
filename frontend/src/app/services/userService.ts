@@ -32,7 +32,7 @@ export const userService = {
   },
 
   async deleteUser(id: string): Promise<void> {
-    await userService.deactivateUser(id);
+    await axiosInstance.delete(`/users/${id}`);
   },
 
   async deactivateUser(id: string): Promise<void> {

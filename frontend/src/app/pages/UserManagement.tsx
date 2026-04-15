@@ -109,6 +109,20 @@ export const UserManagement = () => {
     }
   };
 
+  const handleDeleteUser = async (user: User) => {
+    if (!window.confirm(`Delete ${user.name}? This action cannot be undone.`)) return;
+
+    try {
+      await userService.deleteUser(user._id);
+      await loadUsers();
+      toast.success('User deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete user');
+    } finally {
+      setActiveDropdown(null);
+    }
+  };
+
   const openCreateModal = () => {
     setModalMode('create');
     setEditingUser(null);
@@ -449,28 +463,17 @@ export const UserManagement = () => {
                                   Edit user
                                 </button>
                               )}
-                              {canManageUserStatus() && (
+                              {currentUser?.role === 'admin' && (
                                 <>
                                   <div className="my-1 border-t" style={{ borderColor: 'var(--border-default)' }} />
-                                  {user.status === 'active' ? (
-                                    <button
-                                      onClick={() => handleDeactivateUser(user)}
-                                      className="w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-[var(--hover-nav-bg)]"
-                                      style={{ color: 'var(--error-text)' }}
-                                    >
-                                      <Trash2 size={16} />
-                                      Deactivate user
-                                    </button>
-                                  ) : (
-                                    <button
-                                      onClick={() => handleActivateUser(user)}
-                                      className="w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-[var(--hover-nav-bg)]"
-                                      style={{ color: 'var(--text-label)' }}
-                                    >
-                                      <UserCheck size={16} />
-                                      Activate user
-                                    </button>
-                                  )}
+                                  <button
+                                    onClick={() => handleDeleteUser(user)}
+                                    className="w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-[var(--hover-nav-bg)]"
+                                    style={{ color: 'var(--error-text)' }}
+                                  >
+                                    <Trash2 size={16} />
+                                    Delete user
+                                  </button>
                                 </>
                               )}
                             </div>

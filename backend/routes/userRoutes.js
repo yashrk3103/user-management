@@ -8,6 +8,7 @@ const {
   updateUserValidation,
   deactivateUser,
   activateUser,
+  deleteUser,
   getOwnProfile,
   updateOwnProfile,
 } = require("../controllers/userController");
@@ -55,4 +56,5 @@ router.put(
 );
 
 router.put("/:id/activate", authMiddleware, authorize("admin"), activateUser);
+router.delete("/:id", authMiddleware, authorize("admin"), deleteUser);
 module.exports = router;

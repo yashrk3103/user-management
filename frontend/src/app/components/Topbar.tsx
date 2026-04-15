@@ -19,6 +19,13 @@ export const Topbar = ({ pageName }: TopbarProps) => {
   }, []);
 
   const isDark = theme === 'dark';
+  const workspaceLabel = user
+    ? user.role === 'admin'
+      ? 'Admin Workspace'
+      : user.role === 'manager'
+        ? 'Manager Workspace'
+        : 'User Workspace'
+    : 'User Management';
 
   return (
     <div
@@ -40,7 +47,7 @@ export const Topbar = ({ pageName }: TopbarProps) => {
                 : 'linear-gradient(135deg, #2D74DA 0%, #67A4F0 100%)',
             }}
           />
-          <span style={{ color: 'var(--text-secondary)' }}>Sisyphus Ventures</span>
+          <span style={{ color: 'var(--text-secondary)' }}>{workspaceLabel}</span>
           <ChevronRight size={14} style={{ color: 'var(--text-muted)' }} />
           <span className="font-medium" style={{ color: 'var(--text-primary)' }}>
             {pageName}

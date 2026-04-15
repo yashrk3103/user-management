@@ -243,6 +243,30 @@ const deactivateUser = async (req, res, next) => {
   }
 };
 
+const deleteUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (req.user._id.toString() === id) {
+      return next(new AppError('You cannot delete your own account', 400));
+    }
+
+    const user = await User.findById(id);
+    if (!user) {
+      return next(new AppError('User not found', 404));
+    }
+
+    await User.findByIdAndDelete(id);
+
+    res.json({
+      success: true,
+      message: 'User deleted successfully',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 const getOwnProfile = async (req, res, next) => {
   try {
     const user = await User.findById(req.user._id)
@@ -291,6 +315,7 @@ module.exports = {
   updateUserValidation,
   deactivateUser,
   activateUser,
+  deleteUser,
   getOwnProfile,
   updateOwnProfile,
 };
