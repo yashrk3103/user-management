@@ -95,26 +95,17 @@ user-management/
 │   ├── seeds/           # Database seeding
 │   ├── server.js        # Main entry point
 │   ├── package.json
-│   ├── .env             # Environment variables
-│   └── README.md        # Backend setup guide
+│   └── .env             # Environment variables
 │
 ├── frontend/
 │   ├── src/
-│   │   ├── pages/       # Page components
-│   │   ├── components/  # Reusable components
-│   │   ├── context/     # Auth context
-│   │   ├── services/    # API integration
-│   │   ├── styles/      # CSS files
-│   │   ├── App.jsx      # Main app component
-│   │   └── main.jsx     # Entry point
+│   │   └── app/         # App routes, pages, UI components
 │   ├── public/          # Static assets
 │   ├── package.json
 │   ├── .env             # Environment variables
-│   ├── vite.config.js   # Vite configuration
-│   └── README.md        # Frontend setup guide
+│   └── vite.config.ts   # Vite configuration
 │
-├── ARCHITECTURE.md      # System architecture details
-├── DEPLOYMENT.md        # Deployment instructions
+├── MERN Stack Developer Intern Assessment 14-4-26.pdf
 ├── .gitignore
 └── README.md            # This file
 ```
@@ -193,10 +184,8 @@ Regular User:
 
 ## 📖 Documentation
 
-- **[Backend README](backend/README.md)** - API endpoints, setup, configuration
-- **[Frontend README](frontend/README.md)** - Components, pages, environment setup
-- **[Architecture Guide](ARCHITECTURE.md)** - System design, data flow, security
-- **[Deployment Guide](DEPLOYMENT.md)** - Production deployment instructions
+- This README contains complete setup, test, and deployment guidance.
+- Assessment file is included at project root: `MERN Stack Developer Intern Assessment 14-4-26.pdf`.
 
 ## 🔌 API Endpoints
 
@@ -210,9 +199,9 @@ Regular User:
 - `GET /api/users` - List users (admin, manager)
 - `GET /api/users/:id` - Get user details (admin, manager)
 - `PUT /api/users/:id` - Update user (admin)
+- `PUT /api/users/:id/activate` - Activate user (admin)
 - `PUT /api/users/:id/deactivate` - Deactivate user (admin)
-
-See [Backend README](backend/README.md) for detailed documentation.
+- `DELETE /api/users/:id` - Delete user (admin)
 
 ## 👥 Role-Based Permissions
 
@@ -281,11 +270,14 @@ npm run build
 Creates optimized `dist/` folder for deployment.
 
 ### Deploy
-Follow [DEPLOYMENT.md](DEPLOYMENT.md) for:
-- Backend deployment (Render, Railway)
-- Frontend deployment (Vercel, Netlify)
-- MongoDB Atlas setup
-- Custom domain configuration
+1. Deploy backend from `backend/` on Render or Railway.
+2. Set backend env vars: `PORT`, `NODE_ENV`, `MONGODB_URI`, `JWT_SECRET`, `JWT_EXPIRE`.
+3. Deploy frontend from `frontend/` on Vercel or Netlify.
+4. Set frontend env var: `VITE_API_BASE_URL=https://<your-backend-domain>/api`.
+5. Run smoke checks after deploy:
+  - `GET /health`
+  - Login with seeded credentials
+  - Verify user list, create/edit/deactivate/delete flows
 
 ## 📝 Logs & Debugging
 
@@ -396,7 +388,7 @@ Check:
 ## 📞 Support
 
 For issues:
-1. Check the documentation files
+1. Check this README
 2. Review the error messages
 3. Check browser console (F12)
 4. Check backend logs
