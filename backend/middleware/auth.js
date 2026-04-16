@@ -21,6 +21,15 @@ const authMiddleware = async (req, res, next) => {
       return next(new AppError('User account is inactive', 401));
     }
 
+    const tokenIssuedAtMs = (decoded.iat || 0) * 1000;
+    const invalidAfterMs = user.sessionInvalidAfter
+      ? new Date(user.sessionInvalidAfter).getTime()
+      : 0;
+
+    if (invalidAfterMs > 0 && tokenIssuedAtMs <= invalidAfterMs) {
+      return next(new AppError('Session expired. Please login again', 401));
+    }
+
     req.user = user;
     next();
   } catch (error) {

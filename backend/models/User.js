@@ -27,6 +27,10 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please provide a valid email'],
     },
+    avatar: {
+      type: String,
+      default: '',
+    },
     passwordHash: {
       type: String,
       required: [true, 'Password is required'],
@@ -51,6 +55,44 @@ const userSchema = new mongoose.Schema(
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
+      default: null,
+    },
+    isOnline: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    lastSeenAt: {
+      type: Date,
+      default: null,
+      index: true,
+    },
+    lastLoginAt: {
+      type: Date,
+      default: null,
+    },
+    lastLogoutAt: {
+      type: Date,
+      default: null,
+    },
+    lastBrowser: {
+      type: String,
+      default: 'Other',
+    },
+    lastDeviceType: {
+      type: String,
+      default: 'unknown',
+    },
+    lastUserAgent: {
+      type: String,
+      default: '',
+    },
+    lastIp: {
+      type: String,
+      default: '',
+    },
+    sessionInvalidAfter: {
+      type: Date,
       default: null,
     },
   },

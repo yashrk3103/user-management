@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { CredentialResponse, GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 import { Eye, EyeOff, Key, X } from 'lucide-react';
 import { demoCredentials } from '../services/mockData';
@@ -7,9 +8,12 @@ import { RoleBadge } from '../components/RoleBadge';
 import { BrandLogo } from '../components/BrandLogo';
 import { toast } from 'sonner';
 
+const runtimeEnv = (import.meta as { env?: Record<string, string | undefined> }).env;
+const hasGoogleAuth = Boolean(runtimeEnv?.VITE_GOOGLE_CLIENT_ID?.trim());
+
 export const Login = () => {
   const navigate = useNavigate();
-  const { login, user } = useAuth();
+  const { login, loginWithGoogle, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -46,6 +50,27 @@ export const Login = () => {
     setEmail(demoEmail);
     setPassword(demoPassword);
     setShowDemoCreds(false);
+  };
+
+  const handleGoogleSuccess = async (response: CredentialResponse) => {
+    if (!response.credential) {
+      setError('Unable to read Google credential. Please try again.');
+      return;
+    }
+
+    setError('');
+    setIsLoading(true);
+    try {
+      await loginWithGoogle(response.credential);
+      toast.success('Welcome back!', {
+        description: 'You have successfully signed in with Google.',
+      });
+      navigate('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign in with Google');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -226,6 +251,26 @@ export const Login = () => {
             >
               {isLoading ? 'Signing in...' : 'Sign in'}
             </button>
+
+            {hasGoogleAuth && (
+              <>
+                <div className="flex items-center gap-3 py-1">
+                  <div className="h-px flex-1" style={{ backgroundColor: 'var(--border-default)' }} />
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>OR</span>
+                  <div className="h-px flex-1" style={{ backgroundColor: 'var(--border-default)' }} />
+                </div>
+                <div className="flex justify-center">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => setError('Google sign-in failed. Please try again.')}
+                    text="signin_with"
+                    width="320"
+                    theme="outline"
+                    size="large"
+                  />
+                </div>
+              </>
+            )}
 
             <p className="text-center text-sm" style={{ color: 'var(--text-secondary)' }}>
               New here?{' '}

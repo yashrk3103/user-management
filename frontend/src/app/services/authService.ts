@@ -35,13 +35,35 @@ export const authService = {
     }
   },
 
+  async loginWithGoogle(credential: string): Promise<{ token: string; user: User }> {
+    try {
+      const response = await axiosInstance.post('/auth/google', { credential });
+      return {
+        token: response.data.token,
+        user: response.data.user,
+      };
+    } catch (error: any) {
+      throw new Error(getApiErrorMessage(error, 'Failed to sign in with Google'));
+    }
+  },
+
   async getCurrentUser(): Promise<User> {
     const response = await axiosInstance.get('/users/profile');
     return response.data.data;
   },
 
-  logout(): void {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  async updatePresence(): Promise<void> {
+    await axiosInstance.post('/auth/presence');
+  },
+
+  async logout(): Promise<void> {
+    try {
+      await axiosInstance.post('/auth/logout');
+    } catch {
+      // Ignore logout API failures and clear local state anyway.
+    } finally {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    }
   },
 };

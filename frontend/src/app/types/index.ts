@@ -1,5 +1,7 @@
 export type UserRole = 'admin' | 'manager' | 'user';
 export type UserStatus = 'active' | 'inactive';
+export type DeviceType = 'desktop' | 'mobile' | 'tablet' | 'unknown';
+export type BrowserName = 'Chrome' | 'Safari' | 'Firefox' | 'Edge' | 'Other';
 
 export interface User {
   _id: string;
@@ -11,6 +13,14 @@ export interface User {
   createdAt: string;
   updatedAt: string;
   lastActive?: string;
+  isOnline?: boolean;
+  lastSeenAt?: string;
+  lastLoginAt?: string;
+  lastLogoutAt?: string;
+  lastDeviceType?: DeviceType;
+  lastBrowser?: BrowserName;
+  lastUserAgent?: string;
+  lastIp?: string;
   createdBy?: string;
   updatedBy?: string;
 }
@@ -18,6 +28,7 @@ export interface User {
 export interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<void>;
   signup: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => Promise<void>;

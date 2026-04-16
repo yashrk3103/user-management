@@ -8,6 +8,7 @@ const {
   updateUserValidation,
   deactivateUser,
   activateUser,
+  terminateUserSession,
   deleteUser,
   getOwnProfile,
   updateOwnProfile,
@@ -56,5 +57,11 @@ router.put(
 );
 
 router.put("/:id/activate", authMiddleware, authorize("admin"), activateUser);
+router.put(
+  "/:id/terminate-session",
+  authMiddleware,
+  authorize("admin"),
+  terminateUserSession,
+);
 router.delete("/:id", authMiddleware, authorize("admin"), deleteUser);
 module.exports = router;

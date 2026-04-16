@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
+import { CredentialResponse, GoogleLogin } from '@react-oauth/google';
 import { useAuth } from '../context/AuthContext';
 import { Eye, EyeOff } from 'lucide-react';
 import { BrandLogo } from '../components/BrandLogo';
 import { toast } from 'sonner';
 
+const runtimeEnv = (import.meta as { env?: Record<string, string | undefined> }).env;
+const hasGoogleAuth = Boolean(runtimeEnv?.VITE_GOOGLE_CLIENT_ID?.trim());
+
 export const Signup = () => {
   const navigate = useNavigate();
-  const { signup, user } = useAuth();
+  const { signup, loginWithGoogle, user } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -44,6 +48,25 @@ export const Signup = () => {
       navigate('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Failed to create account');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSuccess = async (response: CredentialResponse) => {
+    if (!response.credential) {
+      setError('Unable to read Google credential. Please try again.');
+      return;
+    }
+
+    setError('');
+    setIsLoading(true);
+    try {
+      await loginWithGoogle(response.credential);
+      toast.success('Account created successfully');
+      navigate('/dashboard');
+    } catch (err: any) {
+      setError(err.message || 'Failed to sign up with Google');
     } finally {
       setIsLoading(false);
     }
@@ -187,6 +210,26 @@ export const Signup = () => {
             >
               {isLoading ? 'Creating account...' : 'Sign up'}
             </button>
+
+            {hasGoogleAuth && (
+              <>
+                <div className="flex items-center gap-3 py-1">
+                  <div className="h-px flex-1" style={{ backgroundColor: 'var(--border-default)' }} />
+                  <span className="text-xs" style={{ color: 'var(--text-secondary)' }}>OR</span>
+                  <div className="h-px flex-1" style={{ backgroundColor: 'var(--border-default)' }} />
+                </div>
+                <div className="flex justify-center">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => setError('Google sign-up failed. Please try again.')}
+                    text="signup_with"
+                    width="320"
+                    theme="outline"
+                    size="large"
+                  />
+                </div>
+              </>
+            )}
           </form>
         </div>
 

@@ -39,6 +39,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const loginWithGoogle = async (credential: string) => {
+    try {
+      const { token, user: userData } = await authService.loginWithGoogle(credential);
+      localStorage.setItem('token', token);
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const signup = async (name: string, email: string, password: string) => {
     try {
       const { token, user: userData } = await authService.signup({ name, email, password });
@@ -50,8 +61,44 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  useEffect(() => {
+    if (!user) return;
+
+    const pingPresence = async () => {
+      try {
+        await authService.updatePresence();
+      } catch {
+        // Presence ping failures should not block user interactions.
+      }
+    };
+
+    void pingPresence();
+    const intervalId = window.setInterval(() => {
+      void pingPresence();
+    }, 10000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        void pingPresence();
+      }
+    };
+
+    const handleFocus = () => {
+      void pingPresence();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user?._id]);
+
   const logout = () => {
-    authService.logout();
+    void authService.logout();
     setUser(null);
   };
 
@@ -63,7 +110,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, updateProfile, loading }}>
+    <AuthContext.Provider value={{ user, login, loginWithGoogle, signup, logout, updateProfile, loading }}>
       {children}
     </AuthContext.Provider>
   );

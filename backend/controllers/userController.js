@@ -2,6 +2,19 @@ const { body, query } = require("express-validator");
 const User = require("../models/User");
 const AppError = require("../utils/errors");
 
+const PRESENCE_TIMEOUT_MS = 60 * 1000;
+
+const toUserResponse = (userDoc) => {
+  const user = userDoc?.toObject ? userDoc.toObject() : { ...userDoc };
+  const lastSeenAtMs = user.lastSeenAt ? new Date(user.lastSeenAt).getTime() : 0;
+  const recentlySeen = lastSeenAtMs > 0 && Date.now() - lastSeenAtMs <= PRESENCE_TIMEOUT_MS;
+
+  return {
+    ...user,
+    isOnline: Boolean(user.isOnline && user.status === "active" && recentlySeen),
+  };
+};
+
 const createUserValidation = [
   body("name")
     .trim()
@@ -111,9 +124,11 @@ const getUsers = async (req, res, next) => {
       .skip((pageNum - 1) * limitNum)
       .exec();
 
+    const normalizedUsers = users.map(toUserResponse);
+
     res.json({
       success: true,
-      data: users,
+      data: normalizedUsers,
       pagination: {
         currentPage: pageNum,
         totalPages: Math.ceil(totalUsers / limitNum),
@@ -140,7 +155,7 @@ const getUserById = async (req, res, next) => {
 
     res.json({
       success: true,
-      data: user,
+      data: toUserResponse(user),
     });
   } catch (error) {
     next(error);
@@ -183,6 +198,11 @@ const updateUser = async (req, res, next) => {
     if (role !== undefined) user.role = role;
     if (status !== undefined) user.status = status;
 
+    if (status === "inactive") {
+      user.isOnline = false;
+      user.lastLogoutAt = new Date();
+    }
+
     user.updatedBy = req.user._id;
 
     await user.save();
@@ -190,7 +210,7 @@ const updateUser = async (req, res, next) => {
     res.json({
       success: true,
       message: "User updated successfully",
-      user: user.toJSON(),
+      user: toUserResponse(user),
     });
   } catch (error) {
     next(error);
@@ -206,12 +226,13 @@ const activateUser = async (req, res, next) => {
       return next(new AppError("User not found", 404));
     }
     user.status = "active";
+    user.isOnline = false;
     user.updatedBy = req.user._id;
     await user.save();
     res.json({
       success: true,
       message: "User activated successfully",
-      user: user.toJSON(),
+      user: toUserResponse(user),
     });
   } catch (error) {
     next(error);
@@ -229,6 +250,8 @@ const deactivateUser = async (req, res, next) => {
     }
 
     user.status = "inactive";
+    user.isOnline = false;
+    user.lastLogoutAt = new Date();
     user.updatedBy = req.user._id;
 
     await user.save();
@@ -236,7 +259,42 @@ const deactivateUser = async (req, res, next) => {
     res.json({
       success: true,
       message: "User deactivated successfully",
-      user: user.toJSON(),
+      user: toUserResponse(user),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+const terminateUserSession = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    if (req.user._id.toString() === id) {
+      return next(
+        new AppError(
+          "Admins cannot terminate their own active session from this panel",
+          400,
+        ),
+      );
+    }
+
+    const user = await User.findById(id);
+
+    if (!user) {
+      return next(new AppError("User not found", 404));
+    }
+
+    user.isOnline = false;
+    user.lastLogoutAt = new Date();
+    user.sessionInvalidAfter = new Date();
+    user.updatedBy = req.user._id;
+    await user.save();
+
+    res.json({
+      success: true,
+      message: "Session terminated successfully",
+      user: toUserResponse(user),
     });
   } catch (error) {
     next(error);
@@ -276,7 +334,7 @@ const getOwnProfile = async (req, res, next) => {
 
     res.json({
       success: true,
-      data: user,
+      data: toUserResponse(user),
     });
   } catch (error) {
     next(error);
@@ -299,7 +357,7 @@ const updateOwnProfile = async (req, res, next) => {
     res.json({
       success: true,
       message: "Profile updated successfully",
-      user: user.toJSON(),
+      user: toUserResponse(user),
     });
   } catch (error) {
     next(error);
@@ -315,6 +373,7 @@ module.exports = {
   updateUserValidation,
   deactivateUser,
   activateUser,
+  terminateUserSession,
   deleteUser,
   getOwnProfile,
   updateOwnProfile,

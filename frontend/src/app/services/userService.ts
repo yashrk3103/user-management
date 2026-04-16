@@ -5,7 +5,13 @@ const mapApiUser = (user: any): User => ({
   ...user,
   createdBy: typeof user.createdBy === 'object' ? user.createdBy?.name : user.createdBy,
   updatedBy: typeof user.updatedBy === 'object' ? user.updatedBy?.name : user.updatedBy,
-  lastActive: user.updatedAt,
+  lastActive: user.lastSeenAt || user.updatedAt,
+  isOnline: Boolean(user.isOnline),
+  lastSeenAt: user.lastSeenAt,
+  lastLoginAt: user.lastLoginAt,
+  lastLogoutAt: user.lastLogoutAt,
+  lastDeviceType: user.lastDeviceType || 'unknown',
+  lastBrowser: user.lastBrowser || 'Other',
 });
 
 export const userService = {
@@ -41,6 +47,10 @@ export const userService = {
 
   async activateUser(id: string): Promise<void> {
     await axiosInstance.put(`/users/${id}/activate`);
+  },
+
+  async terminateSession(id: string): Promise<void> {
+    await axiosInstance.put(`/users/${id}/terminate-session`);
   },
 
   async updateProfile(id: string, data: Partial<User>): Promise<User> {

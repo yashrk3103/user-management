@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router';
 import { useAuth } from '../context/AuthContext';
 import { Topbar } from '../components/Topbar';
-import { Users, UserCheck, ShieldCheck, UserX, UserPlus, Download, KeyRound, Monitor, Smartphone, Chrome, Compass, Globe } from 'lucide-react';
+import { Users, UserCheck, ShieldCheck, UserX, UserPlus, Download, KeyRound, Monitor, Smartphone, Chrome, Compass, Globe, Power } from 'lucide-react';
 import { userService } from '../services/userService';
 import { User } from '../types';
 import { formatDistanceToNow } from 'date-fns';
@@ -13,16 +13,35 @@ export const Dashboard = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [notes, setNotes] = useState('');
-  const [terminatedSessionUserIds, setTerminatedSessionUserIds] = useState<Set<string>>(new Set());
+  const [terminatingUserId, setTerminatingUserId] = useState<string | null>(null);
 
   const NOTES_KEY = `admin-notes:${user?._id || 'anonymous'}`;
 
+  const loadUsers = async (isBackground = false) => {
+    try {
+      if (!isBackground) setLoading(true);
+      const data = await userService.getUsers();
+      setUsers(data);
+    } catch (error) {
+      console.error('Failed to load users:', error);
+    } finally {
+      if (!isBackground) setLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (user?.role === 'admin' || user?.role === 'manager') {
-      loadUsers();
-      return;
+      void loadUsers();
+      const intervalId = window.setInterval(() => {
+        void loadUsers(true);
+      }, 15000);
+
+      return () => {
+        window.clearInterval(intervalId);
+      };
     }
 
+    setUsers([]);
     setLoading(false);
   }, [user?.role]);
 
@@ -30,17 +49,6 @@ export const Dashboard = () => {
     const stored = localStorage.getItem(NOTES_KEY);
     if (stored) setNotes(stored);
   }, [NOTES_KEY]);
-
-  const loadUsers = async () => {
-    try {
-      const data = await userService.getUsers();
-      setUsers(data);
-    } catch (error) {
-      console.error('Failed to load users:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const totalUsers = users.length;
   const activeUsers = users.filter((u) => u.status === 'active').length;
@@ -55,43 +63,52 @@ export const Dashboard = () => {
     [users],
   );
 
-  const activeSessions = useMemo(
+  const sessionUsers = useMemo(
     () =>
-      users
-        .filter((u) => u.status === 'active' && !terminatedSessionUserIds.has(u._id))
-        .sort((a, b) => +new Date(b.updatedAt) - +new Date(a.updatedAt))
-        .slice(0, 6),
-    [users, terminatedSessionUserIds],
+      [...users].sort((a, b) => {
+        const onlineDelta = Number(Boolean(b.isOnline)) - Number(Boolean(a.isOnline));
+        if (onlineDelta !== 0) return onlineDelta;
+
+        return +new Date(b.lastSeenAt || b.updatedAt) - +new Date(a.lastSeenAt || a.updatedAt);
+      }),
+    [users],
   );
 
-  const browserBreakdown = useMemo(() => {
-    const labels = ['Chrome', 'Safari', 'Firefox', 'Edge'];
-    const counts = labels.map((label) => ({ label, value: 0 }));
+  const onlineUsersCount = sessionUsers.filter((u) => u.isOnline).length;
+  const offlineUsersCount = sessionUsers.length - onlineUsersCount;
 
-    users.forEach((u, idx) => {
-      const seed = (u._id + u.email).split('').reduce((acc, c) => acc + c.charCodeAt(0), 0) + idx;
-      counts[seed % counts.length].value += 1;
+  const browserBreakdown = useMemo(() => {
+    const labels = ['Chrome', 'Safari', 'Firefox', 'Edge', 'Other'];
+    const counts = labels.map((label) => ({ label, value: 0 }));
+    const onlineUsers = users.filter((u) => u.status === 'active' && u.isOnline);
+
+    onlineUsers.forEach((u) => {
+      const browser = labels.includes(u.lastBrowser || '') ? (u.lastBrowser as string) : 'Other';
+      const target = counts.find((c) => c.label === browser);
+      if (target) target.value += 1;
     });
 
-    const total = counts.reduce((sum, c) => sum + c.value, 0) || 1;
+    const total = onlineUsers.length;
 
     return counts.map((c) => ({
       ...c,
-      percentage: Math.round((c.value / total) * 100),
+      percentage: total > 0 ? Math.round((c.value / total) * 100) : 0,
     }));
   }, [users]);
 
   const deviceBreakdown = useMemo(() => {
-    const desktop = Math.max(1, Math.round(users.length * 0.72));
-    const mobile = Math.max(0, users.length - desktop);
-    const total = desktop + mobile || 1;
+    const onlineUsers = users.filter((u) => u.status === 'active' && u.isOnline);
+    const desktop = onlineUsers.filter((u) => u.lastDeviceType === 'desktop').length;
+    const mobile = onlineUsers.length - desktop;
+    const total = onlineUsers.length;
+
     return {
       desktop,
       mobile,
-      desktopPct: Math.round((desktop / total) * 100),
-      mobilePct: Math.round((mobile / total) * 100),
+      desktopPct: total > 0 ? Math.round((desktop / total) * 100) : 0,
+      mobilePct: total > 0 ? Math.round((mobile / total) * 100) : 0,
     };
-  }, [users.length]);
+  }, [users]);
 
   const handleSaveNotes = () => {
     localStorage.setItem(NOTES_KEY, notes.trim());
@@ -140,9 +157,28 @@ export const Dashboard = () => {
     }
   };
 
-  const handleTerminateSession = (target: User) => {
-    setTerminatedSessionUserIds((prev) => new Set(prev).add(target._id));
-    toast.success(`Session terminated for ${target.name}`);
+  const handleTerminateSession = async (target: User) => {
+    if (target._id === user?._id) {
+      toast.error('You cannot terminate your own active session.');
+      return;
+    }
+
+    setTerminatingUserId(target._id);
+    try {
+      await userService.terminateSession(target._id);
+      setUsers((prev) =>
+        prev.map((u) =>
+          u._id === target._id
+            ? { ...u, isOnline: false, lastLogoutAt: new Date().toISOString() }
+            : u,
+        ),
+      );
+      toast.success(`Session terminated for ${target.name}`);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to terminate session');
+    } finally {
+      setTerminatingUserId(null);
+    }
   };
 
   const StatCard = ({
@@ -302,30 +338,89 @@ export const Dashboard = () => {
               </div>
 
               <div className="p-5 rounded-xl border xl:col-span-1" style={{ backgroundColor: 'var(--app-card-bg)', borderColor: 'var(--border-default)' }}>
-                <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>Active Sessions</h2>
-                <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>Users currently online now.</p>
-                <div className="mt-4 space-y-2">
-                  {activeSessions.length === 0 ? (
-                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No active sessions.</p>
+                <h2 className="text-lg font-semibold" style={{ color: 'var(--text-primary)' }}>User Presence</h2>
+                <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+                  {onlineUsersCount} online, {offlineUsersCount} offline
+                </p>
+                <div className="mt-4 space-y-2 max-h-[480px] overflow-y-auto pr-1">
+                  {sessionUsers.length === 0 ? (
+                    <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No users found.</p>
                   ) : (
-                    activeSessions.map((u) => (
-                      <div key={u._id} className="p-3 rounded-lg border flex items-center justify-between" style={{ borderColor: 'var(--border-default)' }}>
-                        <div>
-                          <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>{u.name}</p>
-                          <p className="text-xs inline-flex items-center gap-1" style={{ color: '#12B76A' }}>
-                            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: '#12B76A' }} /> Online
-                          </p>
+                    sessionUsers.map((u) => {
+                      const isOnline = Boolean(u.isOnline);
+                      const isCurrentAdminSession = u._id === user?._id;
+                      const isTerminating = terminatingUserId === u._id;
+                      const initials = u.name
+                        .split(' ')
+                        .map((part) => part[0])
+                        .join('')
+                        .slice(0, 2)
+                        .toUpperCase();
+
+                      return (
+                        <div key={u._id} className="p-3 rounded-xl border flex items-start justify-between gap-3" style={{ borderColor: 'var(--border-default)' }}>
+                          <div className="flex items-start gap-3 min-w-0">
+                            <div
+                              className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-semibold shrink-0"
+                              style={{ backgroundColor: 'var(--active-nav-bg)', color: 'var(--text-primary)' }}
+                            >
+                              {initials}
+                            </div>
+
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold truncate" style={{ color: 'var(--text-primary)' }}>{u.name}</p>
+                              <p className="text-xs inline-flex items-center gap-1 mt-0.5" style={{ color: isOnline ? '#12B76A' : 'var(--text-secondary)' }}>
+                                <span
+                                  className="w-2 h-2 rounded-full"
+                                  style={{ backgroundColor: isOnline ? '#12B76A' : 'var(--text-secondary)' }}
+                                />
+                                {isOnline ? 'Online' : 'Offline'}
+                              </p>
+                              <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>
+                                Last seen {formatDistanceToNow(new Date(u.lastSeenAt || u.updatedAt), { addSuffix: true })}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="w-[152px] shrink-0">
+                            {isOnline && !isCurrentAdminSession ? (
+                              <button
+                                type="button"
+                                disabled={isTerminating}
+                                onClick={() => handleTerminateSession(u)}
+                                className="h-9 w-full rounded-lg text-xs border inline-flex items-center justify-center gap-1.5 whitespace-nowrap disabled:opacity-60"
+                                style={{
+                                  borderColor: 'var(--error-border)',
+                                  backgroundColor: 'var(--error-surface)',
+                                  color: 'var(--error-text)',
+                                }}
+                              >
+                                <Power size={13} />
+                                {isTerminating ? 'Terminating...' : 'Terminate Session'}
+                              </button>
+                            ) : isCurrentAdminSession ? (
+                              <span
+                                className="h-9 w-full rounded-lg border inline-flex items-center justify-center text-xs whitespace-nowrap"
+                                style={{
+                                  borderColor: 'var(--border-input)',
+                                  color: 'var(--text-label)',
+                                  backgroundColor: 'var(--top-panel-bg)',
+                                }}
+                              >
+                                Current session
+                              </span>
+                            ) : (
+                              <span
+                                className="h-9 w-full rounded-lg border inline-flex items-center justify-center text-xs whitespace-nowrap"
+                                style={{ borderColor: 'var(--border-default)', color: 'var(--text-secondary)' }}
+                              >
+                                No active session
+                              </span>
+                            )}
+                          </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleTerminateSession(u)}
-                          className="h-8 px-3 rounded-lg text-xs border"
-                          style={{ borderColor: 'var(--border-input)', color: 'var(--text-label)' }}
-                        >
-                          Terminate Session
-                        </button>
-                      </div>
-                    ))
+                      );
+                    })
                   )}
                 </div>
               </div>
