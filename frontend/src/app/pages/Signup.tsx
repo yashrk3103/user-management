@@ -164,7 +164,14 @@ export const Signup = () => {
             </div>
 
             {error && (
-              <div className="text-[13px] p-3 rounded-lg" style={{ backgroundColor: '#FEE', color: 'var(--error-text)' }}>
+              <div
+                className="text-[13px] p-3 rounded-lg border"
+                style={{
+                  backgroundColor: 'var(--error-surface)',
+                  color: 'var(--error-text)',
+                  borderColor: 'var(--error-border)',
+                }}
+              >
                 {error}
               </div>
             )}

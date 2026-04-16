@@ -1,6 +1,15 @@
 import axiosInstance from '../config/axios';
 import { LoginCredentials, SignupPayload, User } from '../types';
 
+const getApiErrorMessage = (error: any, fallback: string) => {
+  if (error?.response?.data?.message) return error.response.data.message;
+  if (error?.response?.data?.error) return error.response.data.error;
+  if (typeof error?.response?.data === 'string' && error.response.data.trim()) return error.response.data;
+  if (error?.code === 'ECONNABORTED') return 'Request timed out. Please try again.';
+  if (error?.message === 'Network Error') return 'Unable to reach the server. Please try again.';
+  return fallback;
+};
+
 export const authService = {
   async login(credentials: LoginCredentials): Promise<{ token: string; user: User }> {
     try {
@@ -10,7 +19,7 @@ export const authService = {
         user: response.data.user,
       };
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Invalid email or password');
+      throw new Error(getApiErrorMessage(error, 'Invalid email or password'));
     }
   },
 
@@ -22,7 +31,7 @@ export const authService = {
         user: response.data.user,
       };
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Failed to create account');
+      throw new Error(getApiErrorMessage(error, 'Failed to create account'));
     }
   },
 

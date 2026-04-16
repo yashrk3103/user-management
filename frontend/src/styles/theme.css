@@ -70,6 +70,7 @@
   --error-border: #FDA29B;
   --error-text: #B42318;
   --error-bg: #F04438;
+  --error-surface: #FEF3F2;
   
   /* Toast */
   --toast-bg: #101828;
@@ -162,8 +163,9 @@
   --badge-user-border: #363636;
 
   --error-border: #5E1A1A;
-  --error-text: #FFCCCC;
+  --error-text: #FFD2D2;
   --error-bg: #A32626;
+  --error-surface: #311010;
 
   --toast-bg: #050505;
   --toast-link: #CFCFCF;

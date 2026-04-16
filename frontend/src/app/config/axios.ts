@@ -1,7 +1,15 @@
 import axios from 'axios';
 
+const normalizeApiBaseUrl = (url: string) => {
+  const trimmed = url.replace(/\/+$/, '');
+  return /\/api($|\/)/.test(trimmed) ? trimmed : `${trimmed}/api`;
+};
+
+const runtimeEnv = (import.meta as { env?: Record<string, string | undefined> }).env;
+const apiBaseUrl = normalizeApiBaseUrl(runtimeEnv?.VITE_API_BASE_URL || 'http://localhost:5000/api');
+
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
+  baseURL: apiBaseUrl,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

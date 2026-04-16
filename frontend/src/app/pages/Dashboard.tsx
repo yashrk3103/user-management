@@ -18,8 +18,13 @@ export const Dashboard = () => {
   const NOTES_KEY = `admin-notes:${user?._id || 'anonymous'}`;
 
   useEffect(() => {
-    loadUsers();
-  }, []);
+    if (user?.role === 'admin' || user?.role === 'manager') {
+      loadUsers();
+      return;
+    }
+
+    setLoading(false);
+  }, [user?.role]);
 
   useEffect(() => {
     const stored = localStorage.getItem(NOTES_KEY);
