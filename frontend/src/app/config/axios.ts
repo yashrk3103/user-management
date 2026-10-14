@@ -35,9 +35,13 @@ axiosInstance.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      const isPublicAuthRoute = ['/login', '/signup'].includes(window.location.pathname);
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/login';
+
+      if (!isPublicAuthRoute) {
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

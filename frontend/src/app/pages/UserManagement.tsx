@@ -5,7 +5,7 @@ import { Topbar } from '../components/Topbar';
 import { UserAvatar } from '../components/UserAvatar';
 import { RoleBadge } from '../components/RoleBadge';
 import { UserModal } from '../components/UserModal';
-import { Search, Filter, Plus, MoreVertical, Eye, Edit2, Trash2, UserCheck, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, Plus, MoreVertical, Eye, Edit2, Trash2, UserCheck, ChevronLeft, ChevronRight, LogOut, X } from 'lucide-react';
 import { userService } from '../services/userService';
 import { User, CreateUserDto, UpdateUserDto } from '../types';
 import { format } from 'date-fns';
@@ -133,6 +133,20 @@ export const UserManagement = () => {
     }
   };
 
+  const handleTerminateSession = async (user: User) => {
+    if (!window.confirm(`Terminate the active session for ${user.name}?`)) return;
+
+    try {
+      await userService.terminateSession(user._id);
+      await loadUsers();
+      toast.success('Active session terminated');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to terminate session');
+    } finally {
+      setActiveDropdown(null);
+    }
+  };
+
   const openCreateModal = () => {
     setModalMode('create');
     setEditingUser(null);
@@ -172,6 +186,67 @@ export const UserManagement = () => {
 
   const canManageUserStatus = () => currentUser?.role === 'admin';
 
+  const clearSelection = () => setSelectedUsers(new Set());
+
+  const handleBulkAction = async (
+    action: 'activate' | 'deactivate' | 'delete' | 'terminate-session',
+  ) => {
+    const selectedList = filteredUsers.filter((user) => selectedUsers.has(user._id));
+    const eligibleUsers = selectedList.filter((user) => {
+      if (action === 'delete' || action === 'terminate-session') {
+        return user._id !== currentUser?._id;
+      }
+      return true;
+    });
+
+    if (selectedList.length === 0) {
+      toast.error('Select at least one user');
+      return;
+    }
+
+    if (eligibleUsers.length === 0) {
+      toast.error('No eligible users selected for that action');
+      return;
+    }
+
+    const actionLabel = {
+      activate: 'activate',
+      deactivate: 'deactivate',
+      delete: 'delete',
+      'terminate-session': 'terminate sessions for',
+    }[action];
+
+    if (!window.confirm(`Are you sure you want to ${actionLabel} ${eligibleUsers.length} selected user${eligibleUsers.length > 1 ? 's' : ''}?`)) {
+      return;
+    }
+
+    try {
+      await Promise.all(
+        eligibleUsers.map((user) => {
+          switch (action) {
+            case 'activate':
+              return userService.activateUser(user._id);
+            case 'deactivate':
+              return userService.deactivateUser(user._id);
+            case 'delete':
+              return userService.deleteUser(user._id);
+            case 'terminate-session':
+              return userService.terminateSession(user._id);
+          }
+        }),
+      );
+
+      await loadUsers();
+      clearSelection();
+      if (eligibleUsers.length !== selectedList.length) {
+        toast.info('Skipped your own account for restricted actions');
+      }
+      toast.success(`Bulk ${action.replace('-', ' ')} completed`);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Bulk action failed');
+    }
+  };
+
   const filteredUsers = users.filter((user) =>
     (user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase())) &&
@@ -182,6 +257,14 @@ export const UserManagement = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, roleFilter, statusFilter]);
+
+  useEffect(() => {
+    setSelectedUsers((prev) => {
+      const visibleIds = new Set(filteredUsers.map((user) => user._id));
+      const next = new Set(Array.from(prev).filter((id) => visibleIds.has(id)));
+      return next.size === prev.size ? prev : next;
+    });
+  }, [filteredUsers]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
@@ -243,6 +326,58 @@ export const UserManagement = () => {
             Manage your team members and their account permissions here.
           </p>
         </div>
+
+        {currentUser?.role === 'admin' && selectedUsers.size > 0 && (
+          <div
+            className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-xl border p-4"
+            style={{ backgroundColor: 'var(--app-card-bg)', borderColor: 'var(--border-default)' }}
+          >
+            <div className="flex items-center gap-3">
+              <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                {selectedUsers.size} selected
+              </div>
+              <button
+                onClick={clearSelection}
+                className="inline-flex items-center gap-1 text-xs font-medium"
+                style={{ color: 'var(--text-secondary)' }}
+              >
+                <X size={14} />
+                Clear
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => handleBulkAction('activate')}
+                className="h-9 rounded-lg px-3 text-sm font-medium"
+                style={{ backgroundColor: '#12B76A', color: '#fff' }}
+              >
+                Activate
+              </button>
+              <button
+                onClick={() => handleBulkAction('deactivate')}
+                className="h-9 rounded-lg px-3 text-sm font-medium"
+                style={{ backgroundColor: 'var(--error-bg)', color: '#fff' }}
+              >
+                Deactivate
+              </button>
+              <button
+                onClick={() => handleBulkAction('terminate-session')}
+                className="h-9 rounded-lg px-3 text-sm font-medium border"
+                style={{ borderColor: 'var(--border-input)', color: 'var(--text-label)' }}
+              >
+                End sessions
+              </button>
+              <button
+                onClick={() => handleBulkAction('delete')}
+                className="h-9 rounded-lg px-3 text-sm font-medium border"
+                style={{ borderColor: 'var(--error-border)', color: 'var(--error-text)' }}
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Actions Bar */}
         <div className="flex items-center justify-between mb-5">
@@ -385,8 +520,15 @@ export const UserManagement = () => {
                           <div className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
                             {user.name}
                           </div>
-                          <div className="text-[13px]" style={{ color: 'var(--text-secondary)' }}>
-                            {user.email}
+                          <div className="flex items-center gap-2 text-[13px]" style={{ color: 'var(--text-secondary)' }}>
+                            <span>{user.email}</span>
+                            {user.isOnline && (
+                              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium"
+                                style={{ backgroundColor: '#ECFDF3', color: '#027A48' }}>
+                                <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: '#12B76A' }} />
+                                Online now
+                              </span>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -471,6 +613,16 @@ export const UserManagement = () => {
                                 >
                                   <Edit2 size={16} />
                                   Edit user
+                                </button>
+                              )}
+                              {currentUser?.role === 'admin' && user.isOnline && currentUser._id !== user._id && (
+                                <button
+                                  onClick={() => handleTerminateSession(user)}
+                                  className="w-full flex items-center gap-3 px-4 py-2 text-sm hover:bg-[var(--hover-nav-bg)]"
+                                  style={{ color: 'var(--text-label)' }}
+                                >
+                                  <LogOut size={16} />
+                                  End active session
                                 </button>
                               )}
                               {currentUser?.role === 'admin' && (

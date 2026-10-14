@@ -6,12 +6,17 @@ const PRESENCE_TIMEOUT_MS = 60 * 1000;
 
 const toUserResponse = (userDoc) => {
   const user = userDoc?.toObject ? userDoc.toObject() : { ...userDoc };
-  const lastSeenAtMs = user.lastSeenAt ? new Date(user.lastSeenAt).getTime() : 0;
-  const recentlySeen = lastSeenAtMs > 0 && Date.now() - lastSeenAtMs <= PRESENCE_TIMEOUT_MS;
+  const lastSeenAtMs = user.lastSeenAt
+    ? new Date(user.lastSeenAt).getTime()
+    : 0;
+  const recentlySeen =
+    lastSeenAtMs > 0 && Date.now() - lastSeenAtMs <= PRESENCE_TIMEOUT_MS;
 
   return {
     ...user,
-    isOnline: Boolean(user.isOnline && user.status === "active" && recentlySeen),
+    isOnline: Boolean(
+      user.isOnline && user.status === "active" && recentlySeen,
+    ),
   };
 };
 
@@ -306,19 +311,19 @@ const deleteUser = async (req, res, next) => {
     const { id } = req.params;
 
     if (req.user._id.toString() === id) {
-      return next(new AppError('You cannot delete your own account', 400));
+      return next(new AppError("You cannot delete your own account", 400));
     }
 
     const user = await User.findById(id);
     if (!user) {
-      return next(new AppError('User not found', 404));
+      return next(new AppError("User not found", 404));
     }
 
     await User.findByIdAndDelete(id);
 
     res.json({
       success: true,
-      message: 'User deleted successfully',
+      message: "User deleted successfully",
     });
   } catch (error) {
     next(error);

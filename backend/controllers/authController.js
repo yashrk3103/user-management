@@ -199,6 +199,7 @@ const logout = async (req, res, next) => {
     req.user.isOnline = false;
     req.user.lastSeenAt = new Date();
     req.user.lastLogoutAt = new Date();
+    req.user.sessionInvalidAfter = new Date();
     await req.user.save();
 
     res.json({

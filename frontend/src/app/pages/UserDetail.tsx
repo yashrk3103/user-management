@@ -6,7 +6,7 @@ import { UserAvatar } from '../components/UserAvatar';
 import { RoleBadge } from '../components/RoleBadge';
 import { StatusBadge } from '../components/StatusBadge';
 import { UserModal } from '../components/UserModal';
-import { ArrowLeft, Edit2, UserCheck, Trash2 } from 'lucide-react';
+import { ArrowLeft, Edit2, UserCheck, Trash2, LogOut } from 'lucide-react';
 import { userService } from '../services/userService';
 import { User, UpdateUserDto } from '../types';
 import { format } from 'date-fns';
@@ -104,7 +104,24 @@ export const UserDetail = () => {
     }
   };
 
+  const handleTerminateSession = async () => {
+    if (!id || !user) return;
+    if (!window.confirm(`Terminate the active session for ${user.name}?`)) return;
+
+    setIsUpdatingStatus(true);
+    try {
+      await userService.terminateSession(id);
+      await loadUser();
+      toast.success('Active session terminated');
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Failed to terminate session');
+    } finally {
+      setIsUpdatingStatus(false);
+    }
+  };
+
   const canAdminManage = currentUser?.role === 'admin';
+  const canTerminateSession = canAdminManage && user.isOnline && currentUser?._id !== user._id;
 
   return (
     <>
@@ -133,6 +150,15 @@ export const UserDetail = () => {
                   </h1>
                   <RoleBadge role={user.role} />
                   <StatusBadge status={user.status} />
+                  {user.isOnline && (
+                    <span
+                      className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"
+                      style={{ backgroundColor: '#ECFDF3', color: '#027A48' }}
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: '#12B76A' }} />
+                      Online now
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
                   {user.email}
@@ -150,6 +176,18 @@ export const UserDetail = () => {
                     <Edit2 size={16} />
                     Edit
                   </button>
+
+                  {canTerminateSession && (
+                    <button
+                      onClick={handleTerminateSession}
+                      disabled={isUpdatingStatus}
+                      className="h-9 rounded-lg border px-3 text-sm font-medium flex items-center gap-2 disabled:opacity-50"
+                      style={{ borderColor: 'var(--border-input)', color: 'var(--text-label)' }}
+                    >
+                      <LogOut size={16} />
+                      End session
+                    </button>
+                  )}
 
                   {user.status === 'active' ? (
                     <button
@@ -220,7 +258,15 @@ export const UserDetail = () => {
                   Last Active
                 </p>
                 <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
-                  {user.lastActive ? formatDate(user.lastActive) : 'Never'}
+                  {user.isOnline ? 'Online now' : user.lastActive ? formatDate(user.lastActive) : 'Never'}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
+                  Session state
+                </p>
+                <p className="text-sm font-medium" style={{ color: 'var(--text-primary)' }}>
+                  {user.isOnline ? 'Active session detected' : 'No active session'}
                 </p>
               </div>
               <div>
