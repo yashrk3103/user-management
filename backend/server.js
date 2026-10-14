@@ -8,6 +8,7 @@ const userRoutes = require('./routes/userRoutes');
 
 const app = express();
 
+// Connect to MongoDB (cached in serverless environments)
 connectDB();
 
 app.use(cors());
@@ -37,3 +38,4 @@ process.on('unhandledRejection', (err) => {
 });
 
 module.exports = app;
+
