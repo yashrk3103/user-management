@@ -11,6 +11,7 @@ import { userService } from '../services/userService';
 import { User, UpdateUserDto } from '../types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { Skeleton } from '../components/ui/skeleton';
 
 export const UserDetail = () => {
   const { user: currentUser } = useAuth();
@@ -40,8 +41,59 @@ export const UserDetail = () => {
     return (
       <>
         <Topbar pageName="User Details" />
-        <div className="flex-1 flex items-center justify-center">
-          <p style={{ color: 'var(--text-secondary)' }}>Loading...</p>
+        <div className="flex-1 overflow-auto p-6">
+          <div className="inline-flex items-center gap-2 mb-6">
+            <Skeleton className="h-4 w-28 rounded" />
+          </div>
+
+          <div className="max-w-3xl space-y-6">
+            {/* Header Card Skeleton */}
+            <div className="p-6 rounded-xl border" style={{ backgroundColor: 'var(--app-card-bg)', borderColor: 'var(--border-default)' }}>
+              <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+                <div className="flex items-start gap-4">
+                  <Skeleton className="w-16 h-16 rounded-full shrink-0" />
+                  <div className="space-y-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Skeleton className="h-6 w-36 rounded" />
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                      <Skeleton className="h-5 w-16 rounded-full" />
+                    </div>
+                    <Skeleton className="h-4 w-48 rounded" />
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Skeleton className="h-9 w-20 rounded-lg" />
+                  <Skeleton className="h-9 w-28 rounded-lg" />
+                </div>
+              </div>
+            </div>
+
+            {/* Information Grid Card Skeleton */}
+            <div className="p-6 rounded-xl border" style={{ backgroundColor: 'var(--app-card-bg)', borderColor: 'var(--border-default)' }}>
+              <Skeleton className="h-4 w-32 rounded mb-6" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="h-3 w-20 rounded" />
+                    <Skeleton className="h-5 w-36 rounded" />
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Audit / Timeline Card Skeleton */}
+            <div className="p-6 rounded-xl border" style={{ backgroundColor: 'var(--app-card-bg)', borderColor: 'var(--border-default)' }}>
+              <Skeleton className="h-4 w-28 rounded mb-6" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="h-3 w-24 rounded" />
+                    <Skeleton className="h-4 w-40 rounded" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </>
     );

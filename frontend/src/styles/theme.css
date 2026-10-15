@@ -169,6 +169,8 @@
 
   --toast-bg: #050505;
   --toast-link: #CFCFCF;
+  --accent: #1F242C;
+  --muted: #1B1E24;
 }
 
 @theme inline {

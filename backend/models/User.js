@@ -101,6 +101,12 @@ const userSchema = new mongoose.Schema(
   }
 );
 
+// High-performance indexes for search, filtering, and dashboard analytics
+userSchema.index({ name: 'text', email: 'text' }, { weights: { name: 3, email: 1 } });
+userSchema.index({ role: 1, status: 1, createdAt: -1 });
+userSchema.index({ status: 1, isOnline: 1, lastSeenAt: -1 });
+userSchema.index({ createdAt: -1 });
+
 userSchema.pre('save', async function () {
   if (!this.isModified('passwordHash')) return;
 

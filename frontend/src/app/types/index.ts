@@ -71,3 +71,27 @@ export interface DemoCredential {
   email: string;
   password: string;
 }
+
+export interface PaginationParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+  role?: string;
+  status?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
+
+export interface PaginationMeta {
+  currentPage: number;
+  totalPages: number;
+  totalUsers: number;
+  limit: number;
+  hasNextPage: boolean;
+  hasPrevPage: boolean;
+}
+
+export interface PaginatedUsersResponse {
+  users: User[];
+  pagination: PaginationMeta;
+}

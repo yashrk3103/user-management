@@ -7,6 +7,7 @@ import { userService } from '../services/userService';
 import { User } from '../types';
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from 'sonner';
+import { Skeleton } from '../components/ui/skeleton';
 
 export const Dashboard = () => {
   const { user } = useAuth();
@@ -207,9 +208,9 @@ export const Dashboard = () => {
             <p className="text-xs mb-1" style={{ color: 'var(--text-secondary)' }}>
               {label}
             </p>
-            <p className="text-[32px] font-semibold leading-none" style={{ color: 'var(--text-primary)' }}>
-              {loading ? '...' : value}
-            </p>
+            <div className="text-[32px] font-semibold leading-none min-h-[32px] flex items-center" style={{ color: 'var(--text-primary)' }}>
+              {loading ? <Skeleton className="h-8 w-16 rounded mt-1" /> : value}
+            </div>
           </div>
         </div>
       </div>
@@ -294,22 +295,37 @@ export const Dashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {newestRegistrations.map((u) => (
-                        <tr key={u._id} className="border-t" style={{ borderColor: 'var(--border-default)' }}>
-                          <td className="py-3">
-                            <div className="flex items-center gap-2">
-                              <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold" style={{ backgroundColor: 'var(--active-nav-bg)', color: 'var(--text-primary)' }}>
-                                {u.name.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()}
+                      {loading ? (
+                        Array.from({ length: 4 }).map((_, i) => (
+                          <tr key={`reg-skel-${i}`} className="border-t" style={{ borderColor: 'var(--border-default)' }}>
+                            <td className="py-3">
+                              <div className="flex items-center gap-2">
+                                <Skeleton className="w-7 h-7 rounded-full shrink-0" />
+                                <Skeleton className="h-4 w-28 rounded" />
                               </div>
-                              <Link to={`/users/${u._id}`} style={{ color: 'var(--text-primary)' }}>{u.name}</Link>
-                            </div>
-                          </td>
-                          <td style={{ color: 'var(--text-secondary)' }}>{u.email}</td>
-                          <td style={{ color: 'var(--text-secondary)' }}>
-                            {formatDistanceToNow(new Date(u.createdAt), { addSuffix: true })}
-                          </td>
-                        </tr>
-                      ))}
+                            </td>
+                            <td className="py-3"><Skeleton className="h-4 w-36 rounded" /></td>
+                            <td className="py-3"><Skeleton className="h-4 w-20 rounded" /></td>
+                          </tr>
+                        ))
+                      ) : (
+                        newestRegistrations.map((u) => (
+                          <tr key={u._id} className="border-t" style={{ borderColor: 'var(--border-default)' }}>
+                            <td className="py-3">
+                              <div className="flex items-center gap-2">
+                                <div className="w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold" style={{ backgroundColor: 'var(--active-nav-bg)', color: 'var(--text-primary)' }}>
+                                  {u.name.split(' ').map((p) => p[0]).join('').slice(0, 2).toUpperCase()}
+                                </div>
+                                <Link to={`/users/${u._id}`} style={{ color: 'var(--text-primary)' }}>{u.name}</Link>
+                              </div>
+                            </td>
+                            <td style={{ color: 'var(--text-secondary)' }}>{u.email}</td>
+                            <td style={{ color: 'var(--text-secondary)' }}>
+                              {formatDistanceToNow(new Date(u.createdAt), { addSuffix: true })}
+                            </td>
+                          </tr>
+                        ))
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -343,7 +359,20 @@ export const Dashboard = () => {
                   {onlineUsersCount} online, {offlineUsersCount} offline
                 </p>
                 <div className="mt-4 space-y-2 max-h-[480px] overflow-y-auto pr-1">
-                  {sessionUsers.length === 0 ? (
+                  {loading ? (
+                    Array.from({ length: 4 }).map((_, i) => (
+                      <div key={`presence-skel-${i}`} className="p-3 rounded-xl border flex items-center justify-between gap-3" style={{ borderColor: 'var(--border-default)' }}>
+                        <div className="flex items-center gap-3">
+                          <Skeleton className="w-9 h-9 rounded-full shrink-0" />
+                          <div className="space-y-1.5">
+                            <Skeleton className="h-3.5 w-24 rounded" />
+                            <Skeleton className="h-2.5 w-32 rounded" />
+                          </div>
+                        </div>
+                        <Skeleton className="h-7 w-20 rounded-lg shrink-0" />
+                      </div>
+                    ))
+                  ) : sessionUsers.length === 0 ? (
                     <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>No users found.</p>
                   ) : (
                     sessionUsers.map((u) => {

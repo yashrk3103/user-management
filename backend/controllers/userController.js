@@ -105,39 +105,62 @@ const createUser = async (req, res, next) => {
 
 const getUsers = async (req, res, next) => {
   try {
-    const { page = 1, limit = 10, role, status, search } = req.query;
-    const pageNum = parseInt(page, 10);
-    const limitNum = parseInt(limit, 10);
+    const { page = 1, limit = 10, role, status, search, sortBy = 'createdAt', sortOrder = 'desc' } = req.query;
+    const pageNum = Math.max(parseInt(page, 10) || 1, 1);
+    const limitNum = Math.min(Math.max(parseInt(limit, 10) || 10, 1), 100); // Guard max 100 to avoid payload exhaustion
 
     const filter = {};
 
-    if (role) filter.role = role;
-    if (status) filter.status = status;
-    if (search) {
+    if (role && ['admin', 'manager', 'user'].includes(role)) {
+      filter.role = role;
+    }
+
+    if (status && ['active', 'inactive'].includes(status)) {
+      filter.status = status;
+    }
+
+    if (search && typeof search === 'string' && search.trim()) {
+      // Escape special regex characters to prevent ReDoS (Regular Expression Denial of Service)
+      const sanitizedSearch = search.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       filter.$or = [
-        { name: { $regex: search, $options: "i" } },
-        { email: { $regex: search, $options: "i" } },
+        { name: { $regex: sanitizedSearch, $options: 'i' } },
+        { email: { $regex: sanitizedSearch, $options: 'i' } },
       ];
     }
 
-    const totalUsers = await User.countDocuments(filter);
+    const sortOptions = {};
+    const validSortFields = ['name', 'email', 'role', 'status', 'createdAt', 'lastSeenAt'];
+    const field = validSortFields.includes(sortBy) ? sortBy : 'createdAt';
+    sortOptions[field] = sortOrder === 'asc' ? 1 : -1;
+
+    // Use estimatedDocumentCount when no filter is applied for O(1) counting
+    const totalUsers = Object.keys(filter).length === 0
+      ? await User.estimatedDocumentCount()
+      : await User.countDocuments(filter);
+
     const users = await User.find(filter)
-      .select("-passwordHash")
-      .populate("createdBy", "name email")
-      .populate("updatedBy", "name email")
+      .select('-passwordHash')
+      .populate('createdBy', 'name email')
+      .populate('updatedBy', 'name email')
+      .sort(sortOptions)
       .limit(limitNum)
       .skip((pageNum - 1) * limitNum)
+      .lean()
       .exec();
 
     const normalizedUsers = users.map(toUserResponse);
+    const totalPages = Math.ceil(totalUsers / limitNum) || 1;
 
     res.json({
       success: true,
       data: normalizedUsers,
       pagination: {
         currentPage: pageNum,
-        totalPages: Math.ceil(totalUsers / limitNum),
+        totalPages,
         totalUsers,
+        limit: limitNum,
+        hasNextPage: pageNum < totalPages,
+        hasPrevPage: pageNum > 1,
       },
     });
   } catch (error) {

@@ -1,4 +1,4 @@
-import { User, CreateUserDto, UpdateUserDto, ChangePasswordDto } from '../types';
+import { User, CreateUserDto, UpdateUserDto, ChangePasswordDto, PaginationParams, PaginatedUsersResponse } from '../types';
 import axiosInstance from '../config/axios';
 
 const mapApiUser = (user: any): User => ({
@@ -15,11 +15,19 @@ const mapApiUser = (user: any): User => ({
 });
 
 export const userService = {
-  async getUsers(): Promise<User[]> {
+  async getPaginatedUsers(params?: PaginationParams): Promise<PaginatedUsersResponse> {
+    const response = await axiosInstance.get('/users', { params });
+    return {
+      users: (response.data.data || []).map(mapApiUser),
+      pagination: response.data.pagination,
+    };
+  },
+
+  async getUsers(params?: PaginationParams): Promise<User[]> {
     const response = await axiosInstance.get('/users', {
-      params: { page: 1, limit: 100 },
+      params: { limit: 100, ...params },
     });
-    return response.data.data.map(mapApiUser);
+    return (response.data.data || []).map(mapApiUser);
   },
 
   async getUserById(id: string): Promise<User> {

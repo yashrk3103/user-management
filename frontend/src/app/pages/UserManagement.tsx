@@ -10,6 +10,7 @@ import { userService } from '../services/userService';
 import { User, CreateUserDto, UpdateUserDto } from '../types';
 import { format } from 'date-fns';
 import { toast } from 'sonner';
+import { Skeleton } from '../components/ui/skeleton';
 
 export const UserManagement = () => {
   const { user: currentUser } = useAuth();
@@ -17,12 +18,15 @@ export const UserManagement = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalUsers, setTotalUsers] = useState(0);
   const [roleFilter, setRoleFilter] = useState<'all' | 'admin' | 'manager' | 'user'>(() => {
     const role = searchParams.get('role');
     return role === 'admin' || role === 'manager' || role === 'user' ? role : 'all';
@@ -33,30 +37,41 @@ export const UserManagement = () => {
   });
   const usersPerPage = 10;
 
+  // 300ms debounce to prevent database query spam on every keystroke
   useEffect(() => {
-    loadUsers();
-  }, []);
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
-    const action = searchParams.get('action');
-    if (action === 'create' && currentUser?.role === 'admin') {
-      openCreateModal();
-      const params = new URLSearchParams(searchParams);
-      params.delete('action');
-      setSearchParams(params, { replace: true });
-    }
-  }, [searchParams, currentUser?.role, setSearchParams]);
+    setCurrentPage(1);
+  }, [debouncedSearch, roleFilter, statusFilter]);
 
   const loadUsers = async () => {
     try {
-      const data = await userService.getUsers();
-      setUsers(data);
+      setLoading(true);
+      const res = await userService.getPaginatedUsers({
+        page: currentPage,
+        limit: usersPerPage,
+        search: debouncedSearch.trim() || undefined,
+        role: roleFilter !== 'all' ? roleFilter : undefined,
+        status: statusFilter !== 'all' ? statusFilter : undefined,
+      });
+      setUsers(res.users);
+      setTotalPages(res.pagination?.totalPages || 1);
+      setTotalUsers(res.pagination?.totalUsers || 0);
     } catch (error) {
       toast.error('Failed to load users');
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadUsers();
+  }, [currentPage, debouncedSearch, roleFilter, statusFilter]);
 
   const handleCreateUser = async (data: CreateUserDto) => {
     try {
@@ -161,10 +176,10 @@ export const UserManagement = () => {
   };
 
   const toggleSelectAll = () => {
-    if (selectedUsers.size === filteredUsers.length) {
+    if (selectedUsers.size === users.length) {
       setSelectedUsers(new Set());
     } else {
-      setSelectedUsers(new Set(filteredUsers.map((u) => u._id)));
+      setSelectedUsers(new Set(users.map((u) => u._id)));
     }
   };
 
@@ -191,7 +206,7 @@ export const UserManagement = () => {
   const handleBulkAction = async (
     action: 'activate' | 'deactivate' | 'delete' | 'terminate-session',
   ) => {
-    const selectedList = filteredUsers.filter((user) => selectedUsers.has(user._id));
+    const selectedList = users.filter((user) => selectedUsers.has(user._id));
     const eligibleUsers = selectedList.filter((user) => {
       if (action === 'delete' || action === 'terminate-session') {
         return user._id !== currentUser?._id;
@@ -247,24 +262,13 @@ export const UserManagement = () => {
     }
   };
 
-  const filteredUsers = users.filter((user) =>
-    (user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase())) &&
-    (roleFilter === 'all' || user.role === roleFilter) &&
-    (statusFilter === 'all' || user.status === statusFilter)
-  );
-
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, roleFilter, statusFilter]);
-
   useEffect(() => {
     setSelectedUsers((prev) => {
-      const visibleIds = new Set(filteredUsers.map((user) => user._id));
+      const visibleIds = new Set(users.map((user) => user._id));
       const next = new Set(Array.from(prev).filter((id) => visibleIds.has(id)));
       return next.size === prev.size ? prev : next;
     });
-  }, [filteredUsers]);
+  }, [users]);
 
   useEffect(() => {
     const params = new URLSearchParams(searchParams);
@@ -288,10 +292,8 @@ export const UserManagement = () => {
     }
   }, [roleFilter, statusFilter, searchParams, setSearchParams]);
 
-  // Pagination
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
-  const startIndex = (currentPage - 1) * usersPerPage;
-  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + usersPerPage);
+  // Server provides paginated subset
+  const paginatedUsers = users;
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), 'MMM d, yyyy');
@@ -319,8 +321,23 @@ export const UserManagement = () => {
       <div className="flex-1 overflow-auto p-6">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl font-semibold mb-1" style={{ color: 'var(--text-primary)' }}>
+          <h1 className="text-2xl font-semibold mb-1 flex items-center gap-2.5" style={{ color: 'var(--text-primary)' }}>
             User management
+            {loading ? (
+              <Skeleton className="h-5 w-16 rounded-full inline-block" />
+            ) : (
+              <span
+                className="text-xs font-medium px-2.5 py-0.5 rounded-full border"
+                style={{
+                  borderColor: 'var(--border-default)',
+                  color: 'var(--text-secondary)',
+                  backgroundColor: 'var(--app-card-bg)',
+                }}
+              >
+                {totalUsers} {totalUsers === 1 ? 'user' : 'users'}
+              </span>
+            )}
+
           </h1>
           <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>
             Manage your team members and their account permissions here.
@@ -382,7 +399,7 @@ export const UserManagement = () => {
         {/* Actions Bar */}
         <div className="flex items-center justify-between mb-5">
           <div className="text-base font-medium" style={{ color: 'var(--text-primary)' }}>
-            All users <span style={{ color: 'var(--text-secondary)' }}>({filteredUsers.length})</span>
+            All users <span style={{ color: 'var(--text-secondary)' }}>({totalUsers})</span>
           </div>
 
           <div className="flex items-center gap-3">
@@ -461,7 +478,7 @@ export const UserManagement = () => {
                 <th className="text-left p-4 w-12">
                   <input
                     type="checkbox"
-                    checked={selectedUsers.size === filteredUsers.length && filteredUsers.length > 0}
+                    checked={selectedUsers.size === users.length && users.length > 0}
                     onChange={toggleSelectAll}
                     className="w-4 h-4 rounded border cursor-pointer"
                     style={{ borderColor: 'var(--border-input)', accentColor: 'var(--focus-ring)' }}
@@ -486,11 +503,41 @@ export const UserManagement = () => {
             </thead>
             <tbody>
               {loading ? (
-                <tr>
-                  <td colSpan={6} className="p-8 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>
-                    Loading users...
-                  </td>
-                </tr>
+                Array.from({ length: 6 }).map((_, i) => (
+                  <tr
+                    key={`skeleton-row-${i}`}
+                    className="border-t"
+                    style={{ borderColor: 'var(--border-default)' }}
+                  >
+                    <td className="p-4">
+                      <Skeleton className="w-4 h-4 rounded" />
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-3">
+                        <Skeleton className="w-10 h-10 rounded-full shrink-0" />
+                        <div className="space-y-1.5 flex-1">
+                          <Skeleton className="h-4 w-32 rounded" />
+                          <Skeleton className="h-3 w-48 rounded" />
+                        </div>
+                      </div>
+                    </td>
+                    <td className="p-4">
+                      <Skeleton className="h-6 w-20 rounded-full" />
+                    </td>
+                    <td className="p-4">
+                      <Skeleton className="h-4 w-24 rounded" />
+                    </td>
+                    <td className="p-4">
+                      <Skeleton className="h-4 w-24 rounded" />
+                    </td>
+                    <td className="p-4">
+                      <div className="flex items-center gap-2">
+                        <Skeleton className="h-8 w-16 rounded" />
+                        <Skeleton className="h-8 w-20 rounded" />
+                      </div>
+                    </td>
+                  </tr>
+                ))
               ) : paginatedUsers.length === 0 ? (
                 <tr>
                   <td colSpan={6} className="p-8 text-center text-sm" style={{ color: 'var(--text-secondary)' }}>

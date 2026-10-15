@@ -1,6 +1,8 @@
-# User Management System
+# User Management & Enterprise Identity Platform
 
-A full-stack MERN (MongoDB, Express, React, Node.js) web application for managing user accounts with role-based access control (RBAC), JWT authentication, and comprehensive audit tracking.
+A full-stack MERN (MongoDB, Express, React, Node.js) web application for managing user accounts with role-based access control (RBAC), JWT authentication, real-time presence tracking, and distributed scalability.
+
+> 🏛️ **Architecture & Scaling Blueprint:** For complete system design, C4 diagrams, mathematical bottleneck analyses, and enterprise scaling roadmaps, see [SYSTEM_DESIGN_SCALING_PLAN.md](./SYSTEM_DESIGN_SCALING_PLAN.md).
 
 ## 🎯 Project Overview
 
@@ -163,6 +165,22 @@ npm run dev
 ```
 
 Application runs on `http://localhost:5173`
+
+---
+
+### ⚡ Quick Start: Single-Command Full-Stack Runner
+
+You don't need to open two terminals! From the root directory:
+
+```bash
+# 1. Install root & subproject dependencies (one time)
+npm install
+npm run install:all
+
+# 2. Run both Backend & Frontend simultaneously
+npm run dev
+```
+Both servers boot together in a single terminal with colored logs (`[BACKEND]` in cyan, `[FRONTEND]` in magenta). Stopping with `Ctrl + C` shuts down both servers cleanly.
 
 ## 🔐 Demo Credentials
 
