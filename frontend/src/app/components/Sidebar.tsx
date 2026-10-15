@@ -59,11 +59,10 @@ export const Sidebar = () => {
     <Link
       to={item.path}
       onClick={() => setIsMobileOpen(false)}
-      className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
-        isActive(item.path)
-          ? 'font-medium'
-          : 'hover:bg-[var(--hover-nav-bg)]'
-      }`}
+      className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${isActive(item.path)
+        ? 'font-medium'
+        : 'hover:bg-[var(--hover-nav-bg)]'
+        }`}
       style={{
         backgroundColor: isActive(item.path) ? 'var(--active-nav-bg)' : 'transparent',
         color: isActive(item.path) ? 'var(--active-nav-text)' : 'var(--text-label)',
@@ -84,27 +83,32 @@ export const Sidebar = () => {
   const SidebarContent = () => (
     <>
       {/* Logo */}
-      <div
-        className="px-6 border-b flex items-center"
-        style={{
-          borderColor: 'var(--panel-border)',
-          minHeight: 'var(--panel-header-height)',
-        }}
-      >
-        <div className="flex items-center gap-3">
-          <BrandLogo size={32} rounded={10} />
-          <div className="flex-1">
-            <div className="flex items-center gap-2">
-              <span className="text-[15px] font-semibold" style={{ color: 'var(--text-primary)' }}>
-                User Manager
-              </span>
-              <span className="px-1.5 py-0.5 text-[11px] rounded" style={{ backgroundColor: 'var(--active-nav-bg)', color: 'var(--text-secondary)' }}>
-                v1.0
-              </span>
+      <Link to="/dashboard">
+        <div
+          className="px-6 border-b flex items-center"
+          style={{
+            borderColor: 'var(--panel-border)',
+            minHeight: 'var(--panel-header-height)',
+          }}
+        >
+
+
+
+          <div className="flex items-center gap-3">
+            <BrandLogo size={32} rounded={10} />
+            <div className="flex-1">
+              <div className="flex items-center gap-2">
+                <span className="text-[15px] font-semibold" style={{ color: 'var(--text-primary)', cursor: 'pointer' }} >
+                  User Manager
+                </span>
+                <span className="px-1.5 py-0.5 text-[11px] rounded" style={{ backgroundColor: 'var(--active-nav-bg)', color: 'var(--text-secondary)' }}>
+                  v1.0
+                </span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </Link>
 
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto p-4">
@@ -173,10 +177,9 @@ export const Sidebar = () => {
 
       {/* Sidebar */}
       <aside
-        className={`fixed md:static inset-y-0 left-0 z-40 w-[280px] flex flex-col transition-transform md:translate-x-0 ${
-          isMobileOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
-        style={{ 
+        className={`fixed md:static inset-y-0 left-0 z-40 w-[280px] flex flex-col transition-transform md:translate-x-0 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
+        style={{
           backgroundColor: 'var(--sidebar-panel-bg)',
           borderRight: '1px solid var(--panel-border)'
         }}
