@@ -22,7 +22,7 @@ router.get("/profile", authMiddleware, getOwnProfile);
 router.put(
   "/profile",
   authMiddleware,
-  updateUserValidation,
+  updateUserValidation, 
   handleValidationErrors,
   updateOwnProfile,
 );
